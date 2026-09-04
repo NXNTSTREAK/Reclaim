@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reclaim :: Observability Dashboard</title>
+  <style>
+    /* RESET & MINIMAL DARK THEME */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #050505;
+      color: #e4e4e7;
+      font-family: 'Consolas', 'Courier New', 'Monaco', monospace;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    /* TERMINAL CONTAINER */
+    .terminal-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
+      padding: 12px;
+      gap: 12px;
+    }
+
+    /* HEADER */
+    .terminal-header {
+      border: 1px solid #27272a;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f0f12;
+      border-radius: 4px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .prompt-symbol {
+      color: #71717a;
+      font-weight: bold;
+      font-size: 15px;
+    }
+
+    .title {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      color: #f4f4f5;
+      text-transform: uppercase;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* MINIMAL BUTTONS */
+    button {
+      background: #18181b;
+      color: #e4e4e7;
+      border: 1px solid #3f3f46;
+      padding: 6px 14px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 3px;
+      text-transform: uppercase;
+      transition: all 0.15s ease;
+    }
+
+    button:hover {
+      background: #27272a;
+      border-color: #71717a;
+      color: #ffffff;
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+
+    /* RED HIGHLIGHT FOR STOP BUTTON */
+    .btn-stop {
+      border-color: #ef4444;
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.05);
+    }
+
+    .btn-stop:hover {
+      background: #ef4444;
+      color: #ffffff;
+      border-color: #ef4444;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+    }
+
+    .status-box {
+      border: 1px solid #27272a;
+      padding: 5px 10px;
+      font-size: 12px;
+      background: #09090b;
+      border-radius: 3px;
+      color: #a1a1aa;
+    }
+
+    .status-running {
+      color: #10b981;
+      font-weight: bold;
+      animation: blink-green 1.5s infinite;
+    }
+
+    /* RED HIGHLIGHT FOR STOPPED STATUS */
+    .status-stopped {
+      color: #ef4444;
+      font-weight: bold;
+    }
+
+    @keyframes blink-green {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* LEDGER PANEL */
+    .ledger-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr 200px;
+      gap: 12px;
+    }
+
+    .ledger-card {
+      border: 1px solid #27272a;
+      background: #0f0f12;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border-radius: 4px;
+    }
+
+    .card-label {
+      font-size: 11px;
+      color: #71717a;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    .card-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #f4f4f5;
+    }
+
+    /* RED HIGHLIGHT FOR REVENUE AT RISK */
+    .red-text {
+      color: #ef4444 !important;
+      text-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
+    }
+
+    /* YELLOW HIGHLIGHT FOR REVENUE RECOVERED */
+    .yellow-text {
+      color: #f59e0b !important;
+      text-shadow: 0 0 8px rgba(245, 158, 11, 0.2);
+    }
+
+    /* RECOVERY ALERT NOTIFICATION */
+    .recovery-banner {
+      border: 1px solid #f59e0b;
+      background: rgba(245, 158, 11, 0.08);
+      color: #f59e0b;
+      padding: 8px 14px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      border-radius: 4px;
+      animation: pulse-yellow 1.5s ease-in-out;
+    }
+
+    .recovery-banner.hidden {
+      display: none;
+    }
+
+    @keyframes pulse-yellow {
+      0% { background: rgba(245, 158, 11, 0.2); }
+      100% { background: rgba(245, 158, 11, 0.08); }
+    }
+
+    /* LOG PANES GRID */
+    .log-panes-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .pane-box {
+      border: 1px solid #27272a;
+      display: flex;
+      flex-direction: column;
+      background: #09090b;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .pane-header {
+      background: #141417;
+      border-bottom: 1px solid #27272a;
+      padding: 7px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #a1a1aa;
+    }
+
+    .pane-tags {
+      color: #52525b;
+      font-size: 10px;
+    }
+
+    .log-pane {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    /* LOG LINE TYPES */
+    .log-entry {
+      margin-bottom: 3px;
+    }
+
+    .log-normal {
+      color: #d4d4d8;
+    }
+
+    /* RED HIGHLIGHT FOR ERRORS & WARNINGS */
+    .log-error {
+      color: #ef4444;
+      font-weight: 600;
+      background: rgba(239, 68, 68, 0.06);
+      padding: 1px 4px;
+      border-left: 2px solid #ef4444;
+    }
+
+    /* NEON GREEN HIGHLIGHT FOR COMPLETED PAYMENTS & FINANCIAL LEDGER CREDITS */
+    .log-ledger {
+      color: #00ff66;
+      font-weight: 600;
+      background: rgba(0, 255, 102, 0.15);
+      padding: 2px 6px;
+      border-left: 3px solid #00ff66;
+      border-radius: 2px;
+      box-shadow: 0 0 10px rgba(0, 255, 102, 0.25);
+    }
+
+    /* YELLOW HIGHLIGHT FOR EMAIL DISPATCH & DELIVERY */
+    .log-email {
+      color: #f59e0b;
+      font-weight: 600;
+      background: rgba(245, 158, 11, 0.12);
+      padding: 2px 6px;
+      border-left: 3px solid #f59e0b;
+      border-radius: 2px;
+    }
+
+    .log-ai {
+      color: #38bdf8;
+    }
+
+    .log-sched {
+      color: #a1a1aa;
+    }
+
+    /* SLEEK DARK SCROLLBAR */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #09090b;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #27272a;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3f3f46;
+    }
+
+    /* FOOTER */
+    .terminal-footer {
+      border: 1px solid #27272a;
+      padding: 8px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f0f12;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #a1a1aa;
+    }
+
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .checkbox-container input {
+      accent-color: #3f3f46;
+      cursor: pointer;
+    }
+
+    .footer-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .btn-sm {
+      padding: 3px 8px;
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="terminal-container">
+    <!-- HEADER -->
+    <header class="terminal-header">
+      <div class="brand">
+        <span class="prompt-symbol">&gt;&gt;</span>
+        <h1 class="title">RECLAIM :: OBSERVABILITY DASHBOARD</h1>
+      </div>
+      <div class="controls">
+        <button id="btn-start" onclick="startEngine()">[ START ENGINE ]</button>
+        <button id="btn-stop" class="btn-stop" onclick="stopEngine()">[ STOP ENGINE ]</button>
+        <div class="status-box">
+          SYS_STATUS: <span id="status-indicator" class="status-stopped">[ STOPPED ]</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- LEDGER PANEL -->
+    <section class="ledger-panel">
+      <div class="ledger-card">
+        <div class="card-label">TOTAL REVENUE AT RISK</div>
+        <div class="card-value red-text" id="revenue-at-risk">₹0.00</div>
+      </div>
+      <div class="ledger-card">
+        <div class="card-label">REVENUE RECOVERED (LIVE)</div>
+        <div class="card-value yellow-text" id="revenue-recovered">₹0.00</div>
+      </div>
+      <div class="ledger-card">
+        <div class="card-label">TOTAL LOG EVENTS</div>
+        <div class="card-value" id="log-count">0</div>
+      </div>
+    </section>
+
+    <!-- RECOVERY NOTIFICATION BANNER -->
+    <div id="recovery-banner" class="recovery-banner hidden">
+      <span>⚡ RECOVERY EVENT:</span>
+      <span id="banner-text">Recovered ₹0.00 from pay_0000</span>
+    </div>
+
+    <!-- DUAL LOG PANES -->
+    <main class="log-panes-grid">
+      <!-- PANE 1: SYSTEM & SCHEDULERS -->
+      <div class="pane-box">
+        <div class="pane-header">
+          <span>LOG PANE 1 :: SYSTEM &amp; SCHEDULERS</span>
+          <span class="pane-tags">[DB] [SCHEDULER] [SYSTEM] [IDEMPOTENCY]</span>
+        </div>
+        <div id="pane-1" class="log-pane"></div>
+      </div>
+
+      <!-- PANE 2: NETWORK, AI & LEDGER -->
+      <div class="pane-box">
+        <div class="pane-header">
+          <span>LOG PANE 2 :: NETWORK, AI &amp; LEDGER</span>
+          <span class="pane-tags">[PHI-4] [DELIVERY] [WARNING] [FINANCIAL LEDGER]</span>
+        </div>
+        <div id="pane-2" class="log-pane"></div>
+      </div>
+    </main>
+
+    <!-- FOOTER CONTROLS -->
+    <footer class="terminal-footer">
+      <div class="footer-left">
+        <label class="checkbox-container">
+          <input type="checkbox" id="lock-scroll-chk">
+          <span>LOCK SCROLL (PAUSE AUTO-SCROLLING)</span>
+        </label>
+      </div>
+      <div class="footer-right">
+        <button class="btn-sm" onclick="clearLogs()">[ CLEAR LOGS ]</button>
+        <span id="conn-status" style="color: #ef4444;">SSE: DISCONNECTED</span>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    let eventSource = null;
+    let totalRevenueAtRiskRupees = 0.0;
+    let totalRecoveredRupees = 0.0;
+    let logEventCount = 0;
+    let notificationTimeout = null;
+
+    // Initialize SSE Stream
+    function initSSE() {
+      if (eventSource) {
+        eventSource.close();
+      }
+
+      eventSource = new EventSource('/api/logs');
+
+      eventSource.onopen = () => {
+        const connEl = document.getElementById('conn-status');
+        connEl.textContent = 'SSE: CONNECTED';
+        connEl.style.color = '#10b981';
+      };
+
+      eventSource.onmessage = (e) => {
+        if (e.data && e.data.trim() !== '') {
+          processLogLine(e.data);
+        }
+      };
+
+      eventSource.onerror = () => {
+        const connEl = document.getElementById('conn-status');
+        connEl.textContent = 'SSE: RECONNECTING...';
+        connEl.style.color = '#ef4444';
+      };
+    }
+
+    // Engine Controls
+    async function startEngine() {
+      try {
+        clearLogs();
+        const res = await fetch('/api/engine/start', { method: 'POST' });
+        const data = await res.json();
+        updateEngineStatusUI(data.status === 'started' || data.status === 'already_running');
+      } catch (err) {
+        console.error('Failed to start engine:', err);
+      }
+    }
+
+    async function stopEngine() {
+      try {
+        const res = await fetch('/api/engine/stop', { method: 'POST' });
+        const data = await res.json();
+        clearLogs();
+        updateEngineStatusUI(false);
+      } catch (err) {
+        console.error('Failed to stop engine:', err);
+      }
+    }
+
+    async function checkEngineStatus() {
+      try {
+        const res = await fetch('/api/engine/status');
+        const data = await res.json();
+        updateEngineStatusUI(data.status === 'running');
+      } catch (err) {
+        updateEngineStatusUI(false);
+      }
+    }
+
+    function updateEngineStatusUI(isRunning) {
+      const indicator = document.getElementById('status-indicator');
+      if (isRunning) {
+        indicator.textContent = '[ RUNNING ]';
+        indicator.className = 'status-running';
+      } else {
+        indicator.textContent = '[ STOPPED ]';
+        indicator.className = 'status-stopped';
+        clearLogs();
+      }
+    }
+
+    // Process & Route Log Lines
+    function processLogLine(line) {
+      logEventCount++;
+      document.getElementById('log-count').textContent = logEventCount;
+
+      const pane1 = document.getElementById('pane-1');
+      const pane2 = document.getElementById('pane-2');
+
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+
+      // Dynamic Revenue at Risk Calculation
+      parseRevenueAtRisk(line);
+
+      // Financial Ledger & Email Detection
+      if (line.includes('[EMAIL]') || line.includes('[DELIVERY]') || line.includes('[EMAIL DISPATCH]')) {
+        entry.className = 'log-entry log-email';
+      } else if (line.includes('[FINANCIAL LEDGER] Successfully credited')) {
+        entry.className = 'log-entry log-ledger';
+        parseFinancialLedger(line);
+      } else if (line.includes('[WARNING]') || line.includes('[ERROR]') || line.includes('Dropped') || line.includes('RAZORPAY ERROR') || line.includes('[LINK EXPIRED]') || line.includes('[ABANDONED]') || line.includes('[IDEMPOTENCY GUARD]') || line.includes('[IDEMPOTENCY]')) {
+        entry.className = 'log-entry log-error';
+      } else if (line.includes('[PHI-4]') || line.includes('[ENGINE EVENT]') || line.includes('[OLLAMA]') || line.includes('[RECOVERY LINK]') || line.includes('[GENERATE_LINK]') || line.includes('[LINK GEN]')) {
+        entry.className = 'log-entry log-ai';
+      } else if (line.includes('[SCHEDULER]')) {
+        entry.className = 'log-entry log-sched';
+      } else {
+        entry.className = 'log-entry log-normal';
+      }
+
+      entry.textContent = line;
+
+      // Routing logic between Pane 1 and Pane 2
+      const isPane1 = line.includes('[DB]') || 
+                      (line.includes('[SCHEDULER]') && !line.includes('[LINK EXPIRED]')) || 
+                      line.includes('[SYSTEM]') || 
+                      line.includes('[IDEMPOTENCY GUARD]') ||
+                      line.includes('[BOOTSTRAP]') ||
+                      line.includes('[DAEMON]') ||
+                      line.includes('[SHUTDOWN]');
+
+      const isPane2 = line.includes('[PHI-4]') || 
+                      line.includes('[DELIVERY]') || 
+                      line.includes('[EMAIL DISPATCH]') ||
+                      line.includes('[EMAIL]') ||
+                      line.includes('[WARNING]') || 
+                      line.includes('[FINANCIAL LEDGER]') ||
+                      line.includes('[ENGINE EVENT]') ||
+                      line.includes('[OLLAMA]') ||
+                      line.includes('[RECOVERY LINK]') ||
+                      line.includes('[GENERATE_LINK]') ||
+                      line.includes('[LINK GEN]') ||
+                      line.includes('[FAST PATH]') ||
+                      line.includes('[RISK GUARD]') ||
+                      line.includes('[HTTP]') ||
+                      line.includes('[RAZORPAY WEBHOOK]') ||
+                      line.includes('[RAZORPAY ERROR]') ||
+                      line.includes('[LINK EXPIRED]') ||
+                      line.includes('[ABANDONED]');
+
+      if (isPane2 && !isPane1) {
+        pane2.appendChild(entry);
+      } else {
+        pane1.appendChild(entry);
+      }
+
+      // Auto-scroll logic if Lock Scroll is not checked
+      const lockScroll = document.getElementById('lock-scroll-chk').checked;
+      if (!lockScroll) {
+        pane1.scrollTop = pane1.scrollHeight;
+        pane2.scrollTop = pane2.scrollHeight;
+      }
+    }
+
+    // Dynamic Revenue at Risk Parser
+    function parseRevenueAtRisk(line) {
+      const riskMatch = line.match(/Amount:\s*₹([\d\.]+)/i);
+      if (riskMatch) {
+        const amt = parseFloat(riskMatch[1]);
+        if (!isNaN(amt)) {
+          totalRevenueAtRiskRupees += amt;
+          document.getElementById('revenue-at-risk').textContent = 
+            '₹' + totalRevenueAtRiskRupees.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+      }
+    }
+
+    // Parse financial ledger line and display yellow notification
+    function parseFinancialLedger(line) {
+      const regex = /\[FINANCIAL LEDGER\]\s+Successfully credited\s*(?:INR|₹)?\s*([\d\.]+)\s*(?:INR|₹)?\s+for payment\s+([\w_]+)/i;
+      const match = line.match(regex);
+
+      if (match) {
+        const amount = parseFloat(match[1]);
+        const paymentId = match[2];
+
+        // Trigger instant DB metric synchronization
+        fetchMetrics();
+
+        // Show Yellow Notification Banner
+        const banner = document.getElementById('recovery-banner');
+        const bannerText = document.getElementById('banner-text');
+        bannerText.textContent = `Recovered ₹${amount.toFixed(2)} from ${paymentId}`;
+        banner.classList.remove('hidden');
+
+        if (notificationTimeout) clearTimeout(notificationTimeout);
+        notificationTimeout = setTimeout(() => {
+          banner.classList.add('hidden');
+        }, 5000);
+      }
+    }
+
+    function clearMetrics() {
+      totalRevenueAtRiskRupees = 0.0;
+      totalRecoveredRupees = 0.0;
+      document.getElementById('revenue-at-risk').textContent = '₹0.00';
+      document.getElementById('revenue-recovered').textContent = '₹0.00';
+    }
+
+    function clearLogs() {
+      document.getElementById('pane-1').innerHTML = '';
+      document.getElementById('pane-2').innerHTML = '';
+      logEventCount = 0;
+      document.getElementById('log-count').textContent = '0';
+      clearMetrics();
+    }
+
+    async function fetchMetrics() {
+      try {
+        const res = await fetch('/api/metrics');
+        const data = await res.json();
+        if (data) {
+          totalRevenueAtRiskRupees = data.revenue_at_risk || 0.0;
+          totalRecoveredRupees = data.revenue_recovered || 0.0;
+          document.getElementById('revenue-at-risk').textContent = 
+            '₹' + totalRevenueAtRiskRupees.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          document.getElementById('revenue-recovered').textContent = 
+            '₹' + totalRecoveredRupees.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+      } catch (err) {
+        console.error('Failed to fetch metrics:', err);
+      }
+    }
+
+    // On Load
+    window.addEventListener('DOMContentLoaded', () => {
+      initSSE();
+      checkEngineStatus();
+      fetchMetrics();
+      setInterval(checkEngineStatus, 3000);
+      setInterval(fetchMetrics, 1000);
+    });
+  </script>
+</body>
+</html>

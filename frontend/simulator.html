@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reclaim // Traffic Simulator & Test Harness</title>
+  <style>
+    :root {
+      --bg-color: #05080a;
+      --panel-bg: #0b1017;
+      --panel-border: #182635;
+      --text-main: #aaccdd;
+      --term-green: #00ff66;
+      --term-green-glow: rgba(0, 255, 102, 0.25);
+      --term-cyan: #00f0ff;
+      --term-cyan-glow: rgba(0, 240, 255, 0.25);
+      --term-yellow: #ffcc00;
+      --term-yellow-glow: rgba(255, 204, 0, 0.25);
+      --term-red: #ff3366;
+      --term-red-glow: rgba(255, 51, 102, 0.3);
+      --term-gray: #4a5c6e;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Courier New', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-image: 
+        radial-gradient(circle at 50% 50%, rgba(10, 25, 35, 0.5) 0%, transparent 80%),
+        linear-gradient(rgba(0, 255, 102, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 102, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 20px 20px, 20px 20px;
+    }
+
+    /* Header Bar */
+    header {
+      background-color: var(--panel-bg);
+      border-bottom: 1px solid var(--panel-border);
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 1px;
+      color: #fff;
+    }
+
+    .brand-icon {
+      color: var(--term-green);
+      font-size: 18px;
+      animation: pulse 2s infinite;
+    }
+
+    .status-badges {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      border: 1px solid var(--panel-border);
+      background-color: rgba(15, 23, 33, 0.8);
+    }
+
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background-color: var(--term-gray);
+    }
+
+    .badge.online .badge-dot { background-color: var(--term-green); box-shadow: 0 0 8px var(--term-green); }
+    .badge.active .badge-dot { background-color: var(--term-cyan); box-shadow: 0 0 8px var(--term-cyan); }
+    .badge.warning .badge-dot { background-color: var(--term-yellow); box-shadow: 0 0 8px var(--term-yellow); }
+    .badge.offline .badge-dot { background-color: var(--term-red); box-shadow: 0 0 8px var(--term-red); }
+
+    /* Main Content Layout */
+    .container {
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      flex: 1;
+    }
+
+    /* Top Metrics Bar */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .kpi-card {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+      background-color: var(--term-gray);
+    }
+
+    .kpi-card.risk::before { background-color: var(--term-yellow); }
+    .kpi-card.events::before { background-color: var(--term-cyan); }
+    .kpi-card.bursts::before { background-color: var(--term-green); }
+    .kpi-card.state::before { background-color: var(--term-red); }
+
+    .kpi-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #7a8c9e;
+      font-weight: 600;
+    }
+
+    .kpi-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff;
+      font-family: var(--font-mono);
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .kpi-unit {
+      font-size: 12px;
+      color: #7a8c9e;
+      font-weight: normal;
+    }
+
+    .pulse-green { animation: flashGreen 0.6s ease; }
+    .pulse-red { animation: flashRed 0.6s ease; }
+
+    @keyframes flashGreen {
+      0% { color: var(--term-green); text-shadow: 0 0 12px var(--term-green); }
+      100% { color: #fff; text-shadow: none; }
+    }
+
+    @keyframes flashRed {
+      0% { color: var(--term-red); text-shadow: 0 0 12px var(--term-red); }
+      100% { color: #fff; text-shadow: none; }
+    }
+
+    /* Modules Section */
+    .modules-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 1024px) {
+      .modules-grid { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .panel-header {
+      background-color: rgba(15, 22, 31, 0.9);
+      border-bottom: 1px solid var(--panel-border);
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      flex: 1;
+    }
+
+    /* Module A: Automated Simulation */
+    .toggle-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: rgba(5, 8, 10, 0.6);
+      border: 1px solid var(--panel-border);
+      padding: 14px 18px;
+      border-radius: 6px;
+    }
+
+    .toggle-label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .toggle-title {
+      font-weight: 700;
+      color: #fff;
+      font-size: 13px;
+    }
+
+    .toggle-desc {
+      font-size: 11px;
+      color: #6a7c8e;
+    }
+
+    /* Custom Terminal Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 30px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #15202b;
+      border: 1px solid #2a3c4e;
+      transition: .3s;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 6px;
+      font-size: 9px;
+      font-weight: 800;
+    }
+
+    .slider::before {
+      position: absolute;
+      content: "";
+      height: 22px;
+      width: 26px;
+      left: 3px;
+      bottom: 3px;
+      background-color: var(--term-gray);
+      transition: .3s;
+      border-radius: 3px;
+    }
+
+    input:checked + .slider {
+      background-color: rgba(0, 255, 102, 0.1);
+      border-color: var(--term-green);
+    }
+
+    input:checked + .slider::before {
+      transform: translateX(27px);
+      background-color: var(--term-green);
+      box-shadow: 0 0 10px var(--term-green);
+    }
+
+    /* Simulation Status Visualizer */
+    .sim-status-box {
+      background-color: #05080c;
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .mode-indicator {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      background-color: #121a24;
+      color: var(--term-gray);
+      border: 1px solid var(--panel-border);
+    }
+
+    .mode-indicator.STANDBY { color: var(--term-gray); }
+    .mode-indicator.LULL { color: var(--term-yellow); border-color: var(--term-yellow); background: var(--term-yellow-glow); }
+    .mode-indicator.BURSTING { color: var(--term-red); border-color: var(--term-red); background: var(--term-red-glow); animation: pulse 0.5s infinite; }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 10px;
+      background-color: #101721;
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid var(--panel-border);
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--term-green), var(--term-cyan));
+      transition: width 0.3s linear;
+      box-shadow: 0 0 8px var(--term-green);
+    }
+
+    .spec-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      font-size: 11px;
+      color: #7a8c9e;
+      background-color: rgba(10, 15, 22, 0.6);
+      padding: 12px;
+      border-radius: 4px;
+      border: 1px dashed var(--panel-border);
+    }
+
+    .spec-item span {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* Module B: Manual Control Panel */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #7a8c9e;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .form-input, .form-select {
+      background-color: #05080c;
+      border: 1px solid var(--panel-border);
+      border-radius: 4px;
+      padding: 10px 14px;
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-input:focus, .form-select:focus {
+      border-color: var(--term-cyan);
+      box-shadow: 0 0 8px var(--term-cyan-glow);
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px 16px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .btn-live {
+      background-color: rgba(0, 255, 102, 0.1);
+      color: var(--term-green);
+      border-color: var(--term-green);
+    }
+
+    .btn-live:hover:not(:disabled) {
+      background-color: var(--term-green);
+      color: #000;
+      box-shadow: 0 0 15px var(--term-green);
+    }
+
+    .btn-forfeit {
+      background-color: rgba(255, 51, 102, 0.1);
+      color: var(--term-red);
+      border-color: var(--term-red);
+    }
+
+    .btn-forfeit:hover:not(:disabled) {
+      background-color: var(--term-red);
+      color: #fff;
+      box-shadow: 0 0 15px var(--term-red);
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      border-color: var(--panel-border);
+      color: var(--term-gray);
+      background-color: transparent;
+      box-shadow: none;
+    }
+
+    /* Live Link Result Card */
+    .live-card {
+      background-color: #05080c;
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+    }
+
+    .live-card.active { border-color: var(--term-green); }
+    .live-card.forfeited { border-color: var(--term-red); opacity: 0.8; }
+
+    .live-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      padding-bottom: 8px;
+    }
+
+    .live-status-pill {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 3px;
+    }
+
+    .live-status-pill.ACTIVE { background-color: rgba(0,255,102,0.15); color: var(--term-green); border: 1px solid var(--term-green); }
+    .live-status-pill.PAID { background-color: rgba(0,255,102,0.25); color: var(--term-green); border: 1px solid var(--term-green); box-shadow: 0 0 10px rgba(0,255,102,0.3); }
+    .live-status-pill.FORFEITED { background-color: rgba(255,51,102,0.15); color: var(--term-red); border: 1px solid var(--term-red); }
+
+    .link-display {
+      background-color: #0b1118;
+      border: 1px solid #1a2736;
+      padding: 8px 12px;
+      border-radius: 4px;
+      word-break: break-all;
+      font-size: 11px;
+      color: var(--term-cyan);
+    }
+
+    .link-display a {
+      color: var(--term-cyan);
+      text-decoration: none;
+    }
+
+    .link-display a:hover { text-decoration: underline; }
+
+    /* Live Terminal Window */
+    .terminal-section {
+      background-color: #030508;
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      height: 380px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+
+    .terminal-header {
+      background-color: #0a0f16;
+      border-bottom: 1px solid var(--panel-border);
+      padding: 8px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .terminal-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .term-btn {
+      background: transparent;
+      border: 1px solid var(--panel-border);
+      color: #7a8c9e;
+      padding: 4px 8px;
+      border-radius: 3px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .term-btn:hover {
+      color: #fff;
+      border-color: #3a4c5e;
+    }
+
+    .term-btn.active {
+      color: var(--term-green);
+      border-color: var(--term-green);
+      background-color: rgba(0,255,102,0.05);
+    }
+
+    .terminal-body {
+      padding: 14px;
+      flex: 1;
+      overflow-y: auto;
+      font-size: 12px;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .log-line {
+      display: flex;
+      gap: 10px;
+      word-break: break-all;
+    }
+
+    .log-time { color: #4a5c6e; flex-shrink: 0; }
+    .log-tag { font-weight: 700; flex-shrink: 0; }
+    .log-msg { color: #c0d0e0; }
+
+    .tag-sim { color: var(--term-green); }
+    .tag-burst { color: var(--term-yellow); }
+    .tag-live { color: var(--term-cyan); }
+    .tag-forfeit { color: var(--term-red); }
+    .tag-backend { color: #7a8c9e; }
+    .tag-info { color: #a0b0c0; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #05080c; }
+    ::-webkit-scrollbar-thumb { background: #1a2736; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #2a3c4e; }
+  </style>
+</head>
+<body>
+
+  <!-- Header Section -->
+  <header>
+    <div class="brand-title">
+      <span class="brand-icon">⚡</span>
+      <span>RECLAIM // TRAFFIC SIMULATOR</span>
+    </div>
+    <div class="status-badges">
+      <div class="badge online" id="bridge-badge">
+        <span class="badge-dot"></span>
+        <span>FASTAPI BRIDGE: <span id="bridge-status">ONLINE</span></span>
+      </div>
+      <div class="badge active" id="engine-badge">
+        <span class="badge-dot"></span>
+        <span>C++ ENGINE: <span id="engine-status">CHECKING...</span></span>
+      </div>
+      <div class="badge warning" id="mode-badge">
+        <span class="badge-dot"></span>
+        <span>MODE: <span id="sim-mode-text">STANDBY</span></span>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- KPI Summary Bar -->
+    <div class="metrics-grid">
+      <div class="kpi-card events">
+        <div class="kpi-title">Total Failure Events Dispatched</div>
+        <div class="kpi-value" id="kpi-events">0 <span class="kpi-unit">events</span></div>
+      </div>
+      <div class="kpi-card bursts">
+        <div class="kpi-title">Micro-Bursts Delivered</div>
+        <div class="kpi-value" id="kpi-bursts">0 <span class="kpi-unit">bursts</span></div>
+      </div>
+      <div class="kpi-card state">
+        <div class="kpi-title">Current Traffic Cycle</div>
+        <div class="kpi-value" id="kpi-cycle">IDLE <span class="kpi-unit" id="kpi-cycle-sub">Toggle OFF</span></div>
+      </div>
+    </div>
+
+    <!-- Main 2-Column Controls Layout -->
+    <div class="modules-grid">
+
+      <!-- Module A: Continuous Burst Simulation (Automated Mode) -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>🔥</span> CONTINUOUS BURST GENERATOR (AUTOMATED)
+          </div>
+          <span style="font-size: 10px; color: #5a6c7e;">FLAG: is_simulation=true</span>
+        </div>
+        <div class="panel-body">
+          
+          <!-- Toggle Control Switch -->
+          <div class="toggle-wrapper">
+            <div class="toggle-label">
+              <span class="toggle-title">Continuous Burst Simulation</span>
+              <span class="toggle-desc">Automated chaotic burst loops & quiet lulls</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="sim-toggle" onchange="handleToggleChange(this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <!-- Real-Time Cycle Visualizer -->
+          <div class="sim-status-box">
+            <div class="status-row">
+              <span style="font-size: 11px; color: #7a8c9e;">TRAFFIC GENERATOR STATE:</span>
+              <span class="mode-indicator STANDBY" id="sim-state-pill">STANDBY</span>
+            </div>
+            <div class="progress-bar-container">
+              <div class="progress-bar-fill" id="lull-progress-bar"></div>
+            </div>
+            <div class="status-row" style="font-size: 11px;">
+              <span id="lull-timer-label" style="color: var(--term-yellow);">Quiet Lull: Inactive</span>
+              <span id="burst-speed-label" style="color: var(--term-cyan);">Target: 15-20 events/1ms</span>
+            </div>
+          </div>
+
+          <!-- Simulation Engine Rules Spec -->
+          <div class="spec-list">
+            <div class="spec-item">Quiet Lulls: <span>30s — 120s (random)</span></div>
+            <div class="spec-item">Micro-Burst: <span>15 — 20 events/ms</span></div>
+            <div class="spec-item">No Email Rule: <span>is_simulation = true</span></div>
+            <div class="spec-item">Target Endpoint: <span>POST /webhook/razorpay</span></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Module B: Manual Live Test Control Panel (Interactive Mode) -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>🎯</span> MANUAL LIVE TEST CONTROL PANEL (INTERACTIVE)
+          </div>
+          <span style="font-size: 10px; color: var(--term-green);">REAL RECOVERY MODE</span>
+        </div>
+        <div class="panel-body">
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label class="form-label" for="live-amount">Payment Amount (₹ INR)</label>
+              <input type="number" id="live-amount" class="form-input" value="999.00" step="10">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="live-reason">Failure Reason</label>
+              <select id="live-reason" class="form-select">
+                <option value="gateway_technical_error">gateway_technical_error (Smart-Path AI Link)</option>
+                <option value="payment_cancelled">payment_cancelled (Smart-Path AI Link)</option>
+                <option value="insufficient_funds">insufficient_funds (Fast-Path Payday Retry)</option>
+                <option value="payment_risk_check_failed">payment_risk_check_failed (Risk Guard Abandon)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="live-email">Recipient Customer Email (Dispatches Real Email)</label>
+            <input type="email" id="live-email" class="form-input" value="customer@example.com" placeholder="customer@example.com">
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="action-buttons">
+            <button class="btn btn-live" id="btn-fire-live" onclick="fireLiveRecoveryTest()">
+              <span>🚀</span> Fire Live Recovery Test
+            </button>
+            <button class="btn btn-forfeit" id="btn-forfeit" onclick="forfeitLiveTest()" disabled>
+              <span>🛑</span> Simulate Timeout / Forfeit
+            </button>
+          </div>
+
+          <!-- Live Active Test Card -->
+          <div class="live-card" id="live-test-card" style="display: none;">
+            <div class="live-card-header">
+              <span style="font-size: 11px; font-weight: 700; color: #fff;" id="live-card-id">pay_LIVE_0000</span>
+              <span class="live-status-pill ACTIVE" id="live-card-status">ACTIVE</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px;">
+              <span>Amount: <strong style="color:#fff;" id="live-card-amount">₹999.00</strong></span>
+              <span style="color: var(--term-yellow);" id="live-card-expiry">Expires in: 02:00</span>
+            </div>
+            <div class="link-display" id="live-card-link-wrapper">
+              <span>Link: </span><a href="#" target="_blank" id="live-card-link-url">https://rzp.io/...</a>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 10px;">
+              <button class="term-btn" style="color: #ef4444; border-color: #ef4444;" id="btn-fail-live" onclick="failLiveTest()">
+                ❌ Decline / Fail Payment
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom: Terminal Window Log -->
+    <div class="terminal-section">
+      <div class="terminal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: var(--term-green);">root@recovery-simulator:~#</span>
+          <span style="font-size: 11px; font-weight: 700; color: #fff;">LIVE STATUS LOG WINDOW</span>
+        </div>
+        <div class="terminal-controls">
+          <button class="term-btn" onclick="clearLogs()">CLEAR LOGS</button>
+          <button class="term-btn active" id="btn-autoscroll" onclick="toggleAutoScroll()">AUTO-SCROLL: ON</button>
+          <button class="term-btn" id="btn-backend-stream" onclick="toggleBackendStream()">STREAM BACKEND LOGS</button>
+        </div>
+      </div>
+      <div class="terminal-body" id="terminal-logs">
+        <!-- Logs dynamically injected here -->
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // System State & Counters
+    let revenueAtRiskPaise = 0;
+    let totalEventsFired = 0;
+    let totalBurstsTriggered = 0;
+
+    let isSimulating = false;
+    let lullTimer = null;
+    let countdownInterval = null;
+    let secondsRemaining = 0;
+
+    let activeLiveTest = null;
+    let liveExpiryInterval = null;
+
+    let autoScroll = true;
+    let sseSource = null;
+
+    // Pool of recent payment IDs to deliberately trigger duplicate idempotency events
+    let duplicatePool = [];
+
+    // Initialize Page
+    window.addEventListener('DOMContentLoaded', () => {
+      logTerminal('System initialized. Monopoly dark terminal aesthetic active.', 'info');
+      logTerminal('Ready to launch continuous burst generator or manual live test harness.', 'info');
+      checkEngineStatus();
+      setInterval(checkEngineStatus, 5000);
+    });
+
+    // Check FastAPI & C++ Engine Status
+    async function checkEngineStatus() {
+      try {
+        const resp = await fetch('/api/engine/status');
+        const data = await resp.json();
+        const engineBadge = document.getElementById('engine-badge');
+        const engineStatusText = document.getElementById('engine-status');
+
+        if (data.status === 'running') {
+          engineBadge.className = 'badge online';
+          engineStatusText.textContent = `RUNNING (PID ${data.pid})`;
+        } else {
+          engineBadge.className = 'badge offline';
+          engineStatusText.textContent = 'STOPPED';
+        }
+      } catch (err) {
+        document.getElementById('engine-badge').className = 'badge offline';
+        document.getElementById('engine-status').textContent = 'UNREACHABLE';
+      }
+    }
+
+    // Handle Continuous Burst Simulation Toggle Switch
+    function handleToggleChange(enabled) {
+      isSimulating = enabled;
+      const modeBadge = document.getElementById('mode-badge');
+      const simModeText = document.getElementById('sim-mode-text');
+      const kpiCycle = document.getElementById('kpi-cycle');
+      const kpiCycleSub = document.getElementById('kpi-cycle-sub');
+
+      if (isSimulating) {
+        modeBadge.className = 'badge active';
+        simModeText.textContent = 'BURST SIMULATION ACTIVE';
+        kpiCycle.textContent = 'ACTIVE';
+        kpiCycleSub.textContent = 'Randomized Bursts & Lulls';
+
+        logTerminal('💥 Continuous Burst Simulation ACTIVATED by operator.', 'sim');
+        logTerminal('Rules enforced: is_simulation=true (Email dispatches disabled).', 'sim');
+        runNextBurstCycle();
+      } else {
+        if (lullTimer) clearTimeout(lullTimer);
+        if (countdownInterval) clearInterval(countdownInterval);
+        lullTimer = null;
+        countdownInterval = null;
+
+        modeBadge.className = 'badge warning';
+        simModeText.textContent = 'STANDBY';
+        kpiCycle.textContent = 'IDLE';
+        kpiCycleSub.textContent = 'Toggle OFF';
+
+        updateLullUI('STANDBY', 0, 0);
+        logTerminal('🛑 Continuous Burst Simulation DEACTIVATED by operator.', 'warning');
+      }
+    }
+
+    // Execute Micro-Burst & Queue Quiet Lull
+    async function runNextBurstCycle() {
+      if (!isSimulating) return;
+
+      // 1. Trigger Micro-burst dumping 15 to 20 failure events within 1ms
+      await executeMicroBurst();
+
+      if (!isSimulating) return;
+
+      // 2. Schedule Quiet Lull between 30 and 120 seconds
+      const lullSeconds = Math.floor(Math.random() * (120 - 30 + 1)) + 30;
+      secondsRemaining = lullSeconds;
+
+      logTerminal(`⏳ [QUIET LULL] Zero-traffic period active for ${lullSeconds} seconds...`, 'burst');
+
+      updateLullUI('LULL', secondsRemaining, lullSeconds);
+
+      if (countdownInterval) clearInterval(countdownInterval);
+      countdownInterval = setInterval(() => {
+        secondsRemaining--;
+        if (secondsRemaining <= 0) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+        } else {
+          updateLullUI('LULL', secondsRemaining, lullSeconds);
+        }
+      }, 1000);
+
+      lullTimer = setTimeout(() => {
+        if (isSimulating) {
+          runNextBurstCycle();
+        }
+      }, lullSeconds * 1000);
+    }
+
+    // Fire 15-20 Synthetic Webhook Events simultaneously (Micro-burst with Duplicate ID Ingestion)
+    async function executeMicroBurst() {
+      updateLullUI('BURSTING', 0, 0);
+
+      const burstSize = Math.floor(Math.random() * (20 - 15 + 1)) + 15;
+      logTerminal(`🚀 [MICRO-BURST INIT] Dumping ${burstSize} synthetic failure events in <1ms (POST /webhook/razorpay)...`, 'burst');
+
+      const amounts = [49900, 99900, 149900, 249900, 499900];
+      const reasons = ['gateway_technical_error', 'payment_cancelled', 'insufficient_funds', 'payment_risk_check_failed'];
+      const nowTs = Date.now();
+
+      let burstPromises = [];
+      let addedRiskPaise = 0;
+      let duplicateCountInBurst = 0;
+
+      for (let i = 0; i < burstSize; i++) {
+        let payId;
+        const isDuplicate = (duplicatePool.length > 2 && Math.random() < 0.35);
+
+        if (isDuplicate) {
+          payId = duplicatePool[Math.floor(Math.random() * duplicatePool.length)];
+          duplicateCountInBurst++;
+        } else {
+          payId = `pay_sim_BURST_${nowTs}_${i + 1}`;
+          duplicatePool.push(payId);
+          if (duplicatePool.length > 40) duplicatePool.shift();
+        }
+
+        const amt = amounts[Math.floor(Math.random() * amounts.length)];
+        const reason = reasons[Math.floor(Math.random() * reasons.length)];
+
+        // Track recoverable amounts as Revenue at Risk only for unique new events
+        if (reason !== 'payment_risk_check_failed' && !isDuplicate) {
+          addedRiskPaise += amt;
+        }
+
+        const payload = {
+          event: "payment.failed",
+          is_simulation: true,
+          payload: {
+            payment: {
+              entity: {
+                id: payId,
+                amount: amt,
+                error_code: "BAD_REQUEST_ERROR",
+                error_reason: reason,
+                error_description: isDuplicate ? "DUPLICATE REPLAY EVENT" : "Synthetic chaotic burst failure payload",
+                error_source: reason === 'insufficient_funds' ? 'customer' : 'bank',
+                error_step: "payment_authn",
+                is_simulation: true
+              }
+            }
+          }
+        };
+
+        burstPromises.push(
+          fetch('/webhook/razorpay', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          }).catch(err => console.error('Burst fetch error:', err))
+        );
+      }
+
+      if (duplicateCountInBurst > 0) {
+        logTerminal(`⚠️ [DUPLICATE FIRER] Ingested ${duplicateCountInBurst} duplicate payment IDs into micro-burst to test Idempotency Guard!`, 'warning');
+      }
+
+      const t0 = performance.now();
+      await Promise.all(burstPromises);
+      const t1 = performance.now();
+
+      totalEventsFired += burstSize;
+      totalBurstsTriggered += 1;
+      revenueAtRiskPaise += addedRiskPaise;
+
+      updateKPIDisplay('green');
+
+      logTerminal(`💥 [MICRO-BURST DISPATCHED] Fired ${burstSize} failure events in ${(t1 - t0).toFixed(2)}ms | is_simulation=true | +₹${(addedRiskPaise / 100).toFixed(2)} at risk.`, 'burst');
+    }
+
+    // Update UI for Lull Countdown & Progress Bar
+    function updateLullUI(state, remainingSec, totalSec) {
+      const statePill = document.getElementById('sim-state-pill');
+      const progressBar = document.getElementById('lull-progress-bar');
+      const timerLabel = document.getElementById('lull-timer-label');
+
+      statePill.className = `mode-indicator ${state}`;
+      statePill.textContent = state;
+
+      if (state === 'LULL') {
+        const pct = Math.max(0, Math.min(100, ((totalSec - remainingSec) / totalSec) * 100));
+        progressBar.style.width = `${pct}%`;
+        timerLabel.textContent = `Quiet Lull: ${remainingSec}s remaining`;
+      } else if (state === 'BURSTING') {
+        progressBar.style.width = `100%`;
+        timerLabel.textContent = `Micro-Burst In Progress...`;
+      } else {
+        progressBar.style.width = `0%`;
+        timerLabel.textContent = `Quiet Lull: Inactive`;
+      }
+    }
+
+    // Manual Live Test Handler: Allowed to hit Ollama AI & Razorpay API & Email Operator
+    async function fireLiveRecoveryTest() {
+      const amountInput = document.getElementById('live-amount');
+      const reasonSelect = document.getElementById('live-reason');
+      const emailInput = document.getElementById('live-email');
+      const btnFire = document.getElementById('btn-fire-live');
+
+      const amountVal = parseFloat(amountInput.value) || 999.00;
+      const amountPaise = Math.round(amountVal * 100);
+      const reason = reasonSelect.value;
+      const emailVal = (emailInput ? emailInput.value : '').trim() || 'customer@example.com';
+      const payId = `pay_LIVE_${Date.now()}`;
+
+      btnFire.disabled = true;
+      btnFire.innerHTML = `<span>⏳</span> Invoking AI & Sending Email...`;
+
+      logTerminal(`🚀 [LIVE TEST] Initiating single live recovery test for ${payId} (₹${amountVal.toFixed(2)}, reason=${reason})...`, 'live');
+      logTerminal(`[LIVE TEST] Request sent to FastAPI & Ollama AI (is_simulation=false, target=${emailVal})...`, 'live');
+
+      try {
+        const resp = await fetch('/generate_link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            payment_id: payId,
+            amount: amountPaise,
+            error_reason: reason,
+            error_source: 'bank',
+            error_code: 'GATEWAY_TIMEOUT',
+            is_simulation: false,
+            email: emailVal,
+            force_email: true
+          })
+        });
+
+        const result = await resp.json();
+        btnFire.disabled = false;
+        btnFire.innerHTML = `<span>🚀</span> Fire Live Recovery Test`;
+
+        if (result.status === 'success' || result.action === 'GENERATE_NEW_LINK') {
+          const rawLink = result.link || '#';
+          revenueAtRiskPaise += amountPaise;
+          updateKPIDisplay('green');
+
+          activeLiveTest = {
+            id: payId,
+            amountPaise: amountPaise,
+            link: rawLink,
+            action: result.action,
+            status: 'ACTIVE',
+            createdTs: Date.now(),
+            expiresTs: Date.now() + (120 * 1000)
+          };
+
+          totalEventsFired += 1;
+          updateKPIDisplay();
+          renderLiveCard();
+
+          document.getElementById('btn-forfeit').disabled = false;
+
+          logTerminal(`✅ [LIVE TEST SUCCESS] Payment link generated: ${rawLink}`, 'live');
+          logTerminal(`📩 [EMAIL DISPATCH] Sent recovery link to ${emailVal} (₹${amountVal.toFixed(2)}) | Added ₹${amountVal.toFixed(2)} to Revenue at Risk.`, 'live');
+        } else {
+          logTerminal(`ℹ️ [LIVE TEST RESPONSE] Action: ${result.action} | Link: ${result.link}`, 'info');
+        }
+      } catch (err) {
+        btnFire.disabled = false;
+        btnFire.innerHTML = `<span>🚀</span> Fire Live Recovery Test`;
+        logTerminal(`❌ [LIVE TEST ERROR] Request failed: ${err.message}`, 'forfeit');
+      }
+    }
+
+    // Simulate Link Timeout / Forfeit Handler
+    function forfeitLiveTest() {
+      if (!activeLiveTest || activeLiveTest.status === 'FORFEITED') {
+        logTerminal(`⚠️ [FORFEIT WARN] No active live link available to forfeit.`, 'warning');
+        return;
+      }
+
+      const amtPaise = activeLiveTest.amountPaise;
+      revenueAtRiskPaise = Math.max(0, revenueAtRiskPaise - amtPaise);
+      activeLiveTest.status = 'FORFEITED';
+
+      if (liveExpiryInterval) clearInterval(liveExpiryInterval);
+
+      updateKPIDisplay('red');
+      renderLiveCard();
+
+      document.getElementById('btn-forfeit').disabled = true;
+
+      logTerminal(`🛑 [FORFEIT EXPLICIT] Active live test link ${activeLiveTest.id} FORFEITED/EXPIRED.`, 'forfeit');
+      logTerminal(`📉 [REVENUE AT RISK] Explicitly subtracted ₹${(amtPaise / 100).toFixed(2)} from visual Revenue at Risk tracker!`, 'forfeit');
+    }
+
+    // Simulate Explicit Customer Fail / Abandon Handler
+    async function failLiveTest() {
+      if (!activeLiveTest || activeLiveTest.status === 'ABANDONED' || activeLiveTest.status === 'PAID') {
+        logTerminal(`⚠️ [ABANDON WARN] No active live link available to fail.`, 'warning');
+        return;
+      }
+
+      const payId = activeLiveTest.id;
+      const amtPaise = activeLiveTest.amountPaise;
+      revenueAtRiskPaise = Math.max(0, revenueAtRiskPaise - amtPaise);
+      activeLiveTest.status = 'ABANDONED';
+
+      if (liveExpiryInterval) clearInterval(liveExpiryInterval);
+
+      updateKPIDisplay('red');
+      renderLiveCard();
+
+      document.getElementById('btn-forfeit').disabled = true;
+
+      try {
+        await fetch('/api/abandon_payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payment_id: payId, reason: 'Operator explicitly clicked Decline / Fail' })
+        });
+      } catch (e) {
+        console.error('Failed to notify abandon_payment:', e);
+      }
+
+      logTerminal(`🛑 [ABANDONED] Live test payment ${payId} set to ABANDONED. Subtracted ₹${(amtPaise/100).toFixed(2)} from Revenue at Risk.`, 'forfeit');
+    }
+
+    // Render Active Live Link Card
+    function renderLiveCard() {
+      const card = document.getElementById('live-test-card');
+      if (!activeLiveTest) {
+        card.style.display = 'none';
+        return;
+      }
+
+      card.style.display = 'flex';
+      card.className = `live-card ${activeLiveTest.status.toLowerCase()}`;
+
+      document.getElementById('live-card-id').textContent = activeLiveTest.id;
+      document.getElementById('live-card-amount').textContent = `₹${(activeLiveTest.amountPaise / 100).toFixed(2)}`;
+
+      const statusPill = document.getElementById('live-card-status');
+      statusPill.textContent = activeLiveTest.status;
+      statusPill.className = `live-status-pill ${activeLiveTest.status}`;
+
+      const linkUrl = document.getElementById('live-card-link-url');
+      linkUrl.href = activeLiveTest.link;
+      linkUrl.textContent = activeLiveTest.link;
+
+      if (activeLiveTest.status === 'ACTIVE') {
+        startLiveExpiryCountdown();
+      } else {
+        document.getElementById('live-card-expiry').textContent = 'EXPIRED / FORFEITED';
+      }
+    }
+
+    // Live Card Expiry Timer & Real-time Webhook Verification
+    function startLiveExpiryCountdown() {
+      if (liveExpiryInterval) clearInterval(liveExpiryInterval);
+
+      liveExpiryInterval = setInterval(async () => {
+        if (!activeLiveTest || activeLiveTest.status !== 'ACTIVE') {
+          clearInterval(liveExpiryInterval);
+          return;
+        }
+
+        // Poll backend to check if Razorpay webhook marked this payment SUCCESSFUL
+        try {
+          const resp = await fetch(`/api/payment_status/${activeLiveTest.id}`);
+          const data = await resp.json();
+          if (data && data.state === 'SUCCESSFUL') {
+            clearInterval(liveExpiryInterval);
+            activeLiveTest.status = 'PAID';
+            document.getElementById('btn-forfeit').disabled = true;
+            renderLiveCard();
+            logTerminal(`🎉 [PAYMENT CAPTURED] Live test payment ${activeLiveTest.id} (₹${(activeLiveTest.amountPaise/100).toFixed(2)}) verified PAID!`, 'live');
+            return;
+          }
+        } catch (e) {
+          // Ignore network glitch during polling
+        }
+
+        const remainingMs = activeLiveTest.expiresTs - Date.now();
+        if (remainingMs <= 0) {
+          clearInterval(liveExpiryInterval);
+          forfeitLiveTest();
+        } else {
+          const totalSec = Math.floor(remainingMs / 1000);
+          const mins = Math.floor(totalSec / 60);
+          const secs = totalSec % 60;
+          document.getElementById('live-card-expiry').textContent = `Expires in: ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+      }, 1500);
+    }
+
+    // Update Top KPI Cards Display
+    function updateKPIDisplay(pulseColor = null) {
+      const riskEl = document.getElementById('kpi-risk');
+      const eventsEl = document.getElementById('kpi-events');
+      const burstsEl = document.getElementById('kpi-bursts');
+
+      if (eventsEl && eventsEl.childNodes[0]) eventsEl.childNodes[0].textContent = `${totalEventsFired} `;
+      if (burstsEl && burstsEl.childNodes[0]) burstsEl.childNodes[0].textContent = `${totalBurstsTriggered} `;
+
+      if (riskEl) {
+        const formattedRisk = (revenueAtRiskPaise / 100).toLocaleString('en-IN', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+        if (riskEl.childNodes[0]) riskEl.childNodes[0].textContent = `₹${formattedRisk} `;
+
+        if (pulseColor === 'green') {
+          riskEl.classList.remove('pulse-green', 'pulse-red');
+          void riskEl.offsetWidth;
+          riskEl.classList.add('pulse-green');
+        } else if (pulseColor === 'red') {
+          riskEl.classList.remove('pulse-green', 'pulse-red');
+          void riskEl.offsetWidth;
+          riskEl.classList.add('pulse-red');
+        }
+      }
+    }
+
+    // Terminal Logging Helper
+    function logTerminal(message, type = 'info') {
+      const logsContainer = document.getElementById('terminal-logs');
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0];
+
+      const line = document.createElement('div');
+      line.className = 'log-line';
+
+      let tagText = '[SIMULATOR]';
+      let tagClass = 'tag-sim';
+
+      const isIdempotency = message.includes('[IDEMPOTENCY]') || message.includes('[IDEMPOTENCY GUARD]') || message.includes('Idempotency') || message.includes('already processed') || message.includes('already seen') || message.includes('Duplicate');
+      const isExpired = message.includes('[LINK EXPIRED]') || message.includes('EXPIRED');
+
+      if (isIdempotency) {
+        tagText = '[IDEMPOTENCY GUARD]';
+        tagClass = 'tag-forfeit';
+      } else if (isExpired && type !== 'info') {
+        tagText = '[LINK EXPIRED]';
+        tagClass = 'tag-forfeit';
+      } else if (type === 'burst') { tagText = '[MICRO-BURST]'; tagClass = 'tag-burst'; }
+      else if (type === 'live') { tagText = '[LIVE TEST]'; tagClass = 'tag-live'; }
+      else if (type === 'forfeit') { tagText = '[FORFEIT]'; tagClass = 'tag-forfeit'; }
+      else if (type === 'backend') { tagText = '[BACKEND]'; tagClass = 'tag-backend'; }
+      else if (type === 'warning') { tagText = '[WARNING]'; tagClass = 'tag-burst'; }
+
+      const msgStyle = (isIdempotency || isExpired) ? 'style="color: #ef4444 !important; font-weight: 700;"' : '';
+
+      line.innerHTML = `
+        <span class="log-time">[${timeStr}]</span>
+        <span class="log-tag ${tagClass}">${tagText}</span>
+        <span class="log-msg" ${msgStyle}>${escapeHtml(message)}</span>
+      `;
+
+      logsContainer.appendChild(line);
+
+      if (autoScroll) {
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+      }
+    }
+
+    function clearLogs() {
+      document.getElementById('terminal-logs').innerHTML = '';
+      logTerminal('Log window cleared.', 'info');
+    }
+
+    function toggleAutoScroll() {
+      autoScroll = !autoScroll;
+      const btn = document.getElementById('btn-autoscroll');
+      btn.textContent = `AUTO-SCROLL: ${autoScroll ? 'ON' : 'OFF'}`;
+      btn.className = `term-btn ${autoScroll ? 'active' : ''}`;
+    }
+
+    function toggleBackendStream() {
+      const btn = document.getElementById('btn-backend-stream');
+
+      if (sseSource) {
+        sseSource.close();
+        sseSource = null;
+        btn.textContent = 'STREAM BACKEND LOGS';
+        btn.className = 'term-btn';
+        logTerminal('Disconnected from FastAPI backend SSE log stream.', 'info');
+      } else {
+        sseSource = new EventSource('/api/logs');
+        btn.textContent = 'STOP STREAM';
+        btn.className = 'term-btn active';
+        logTerminal('Connected to FastAPI backend SSE log stream (/api/logs)...', 'info');
+
+        sseSource.onmessage = (event) => {
+          if (event.data && event.data !== ': keep-alive') {
+            logTerminal(event.data, 'backend');
+          }
+        };
+
+        sseSource.onerror = () => {
+          logTerminal('Backend SSE log stream disconnected.', 'warning');
+          if (sseSource) {
+            sseSource.close();
+            sseSource = null;
+            btn.textContent = 'STREAM BACKEND LOGS';
+            btn.className = 'term-btn';
+          }
+        };
+      }
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>

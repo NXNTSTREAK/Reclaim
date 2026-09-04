@@ -1,0 +1,97 @@
+# ==============================================================================
+# Razorpay AI Revenue Recovery Engine - Git Ignore Configuration
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Secrets & Environment Protection
+# ------------------------------------------------------------------------------
+.env
+.env.*
+*.env
+!.env.example
+*.pem
+*.key
+*credential*.json
+*credentials*.json
+*secret*.json
+secrets/
+credentials/
+service_account*.json
+
+# ------------------------------------------------------------------------------
+# 2. Build Artifacts & Compiled Binaries
+# ------------------------------------------------------------------------------
+build/
+/build/
+bin/
+out/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+compile_commands.json
+*.o
+*.obj
+*.lo
+*.la
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+recovery_engine
+recovery_engine.exe
+*.elf
+*.exe
+
+# ------------------------------------------------------------------------------
+# 3. Database & Local Runtime Data
+# ------------------------------------------------------------------------------
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# ------------------------------------------------------------------------------
+# 4. Python & Virtual Environment Caches
+# ------------------------------------------------------------------------------
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ------------------------------------------------------------------------------
+# 5. Audit Implementation & Temporary Test Files
+# ------------------------------------------------------------------------------
+*audit*
+*.log
+*.log.*
+lt_output.log
+uvicorn.log
+*report*.json
+*report*.csv
+*report*.xml
+*report*.html
+*report*.txt
+temp/
+tmp/
+*.tmp
+
+# ------------------------------------------------------------------------------
+# 6. Documentation Hygiene
+# ------------------------------------------------------------------------------
+*.md
+!README.md
+!/README.md
