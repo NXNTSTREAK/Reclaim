@@ -187,6 +187,17 @@ Access the **Observability Dashboard** at `http://localhost:8000` and the **Traf
 
 ---
 
+<h2 align="center">Important Developer Notes</h2>
+
+> [!NOTE]
+> **Key Operational Tips & Fallback Behavior**:
+> - **Simulation Mode**: If real Razorpay keys or SMTP credentials are omitted from your `.env` file, the engine automatically operates in simulation mode for local testing.
+> - **Local AI Model Setup**: The engine leverages Ollama with the `phi4-mini` model (`http://localhost:11434`). If Ollama is unavailable, fallback policies guarantee continuous execution without transaction failure.
+> - **Port Requirements**: Ensure ports `8000` (FastAPI Web Server), `9001` (UDP Webhook Listener), and `11434` (Ollama LLM Service) are free on your host machine.
+> - **Database Maintenance**: SQLite database files (`recovery_engine.db`, `-wal`, `-shm`) are generated locally during execution and are strictly ignored by version control.
+
+---
+
 <h2 align="center">Repository Directory Layout</h2>
 
 ```
