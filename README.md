@@ -193,6 +193,13 @@ revenue_recovery/
 
 ---
 
+<h2 align="center">Credits & Acknowledgments</h2>
+
+- **[cpp-httplib](https://github.com/yhirose/cpp-httplib)** by Yuji Hirose ([@yhirose](https://github.com/yhirose)) - Single-header C++11 HTTP/HTTPS client & server library.
+- **[nlohmann/json](https://github.com/nlohmann/json)** by Niels Lohmann ([@nlohmann](https://github.com/nlohmann)) - Modern C++ JSON library.
+
+---
+
 <p align="center">
   <sub>Built with precision for high-availability digital payment infrastructure. Distributed under the MIT License.</sub>
 </p>
