@@ -17,8 +17,6 @@
 
 <h2 align="center">Overview</h2>
 
-> [!IMPORTANT]
-> **RBI Compliance & Operational Integrity**: Reclaim operates under strict **Reserve Bank of India (RBI)** digital payment guidelines, ensuring automated retry strategies, smart payment links, and customer contact frequency abide by mandate policies and fair practice codes.
 
 <details>
 <summary><b>What this is / isn't</b></summary>
