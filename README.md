@@ -1,7 +1,7 @@
 <h1 align="center">[ Reclaim - AI Revenue Recovery Engine ]</h1>
 
 <p align="center">
-  <i>Enterprise-Grade, High-Throughput AI-Augmented Payment Recovery Engine for Razorpay Ecosystems</i>
+  <i>High-Throughput AI-Augmented Payment Recovery Engine for Razorpay Ecosystems</i>
 </p>
 
 <p align="center">
@@ -23,7 +23,7 @@
 <br />
 
 #### **What it is:**
-- An enterprise-grade **dual-engine architecture** combining a zero-latency C++ core daemon with an asynchronous Python FastAPI bridge.
+- An **dual-engine architecture** combining a zero-latency C++ core daemon with an asynchronous Python FastAPI bridge.
 - A high-throughput event processor capable of ingesting payment failure webhooks via UDP datagrams at **15-20 events/ms**.
 - An intelligent recovery workflow enforcing rule-based policies and AI diagnosis via **Ollama (`phi4-mini`)** or **Gemini AI**.
 - A real-time observability control plane with live financial ledger tracking (`Revenue at Risk` vs. `Revenue Recovered`).
