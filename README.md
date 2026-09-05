@@ -1,4 +1,4 @@
-<h1 align="center">【 Reclaim — AI Revenue Recovery Engine 】</h1>
+<h1 align="center">[ Reclaim - AI Revenue Recovery Engine ]</h1>
 
 <p align="center">
   <i>Enterprise-Grade, High-Throughput AI-Augmented Payment Recovery Engine for Razorpay Ecosystems</i>
@@ -15,45 +15,45 @@
 
 ---
 
-<h2 align="center">• overview •</h2>
+<h2 align="center">Overview</h2>
 
 > [!IMPORTANT]
 > **RBI Compliance & Operational Integrity**: Reclaim operates under strict **Reserve Bank of India (RBI)** digital payment guidelines, ensuring automated retry strategies, smart payment links, and customer contact frequency abide by mandate policies and fair practice codes.
 
 <details>
-<summary><b>▸ What this is/isn't</b></summary>
+<summary><b>What this is / isn't</b></summary>
 
 <br />
 
 #### **What it is:**
 - An enterprise-grade **dual-engine architecture** combining a zero-latency C++ core daemon with an asynchronous Python FastAPI bridge.
-- A high-throughput event processor capable of ingesting payment failure webhooks via UDP datagrams at **15–20 events/ms**.
+- A high-throughput event processor capable of ingesting payment failure webhooks via UDP datagrams at **15-20 events/ms**.
 - An intelligent recovery workflow enforcing rule-based policies and AI diagnosis via **Ollama (`phi4-mini`)** or **Gemini AI**.
 - A real-time observability control plane with live financial ledger tracking (`Revenue at Risk` vs. `Revenue Recovered`).
 
 #### **What it isn't:**
 - A generic wrapper around payment gateways.
 - A naive polling loop that spams customer endpoints.
-- A single-threaded script—Reclaim uses thread-safe queues, min-heap schedulers, and WAL-mode SQLite databases.
+- A single-threaded script - Reclaim uses thread-safe queues, min-heap schedulers, and WAL-mode SQLite databases.
 
 </details>
 
 <details>
-<summary><b>▸ Notable Features & Capabilities</b></summary>
+<summary><b>Notable Features & Capabilities</b></summary>
 
 <br />
 
-- ⚡ **Zero-Latency UDP Ingestion**: High-speed C++ datagram listener (`port 9001`) for instant failure event capture without HTTP overhead.
-- 🛡️ **Idempotency Guard**: Dual-layer (in-memory + persistent SQLite) event deduplication preventing double processing or multiple link generation.
-- 🧠 **Smart-Path AI Classification**: Categorizes errors into `GENERATE_NEW_LINK`, `SCHEDULE_PAYDAY_RETRY`, or `ABANDON` (risk check failure).
-- ⌛ **Non-Blocking Timer Scheduler**: Min-heap scheduled retries and 120-second link expiry enforcement.
-- 📊 **Real-Time SSE Dashboard**: Server-Sent Events stream live C++ process logs directly to the browser UI.
+- **Zero-Latency UDP Ingestion**: High-speed C++ datagram listener (`port 9001`) for instant failure event capture without HTTP overhead.
+- **Idempotency Guard**: Dual-layer (in-memory + persistent SQLite) event deduplication preventing double processing or multiple link generation.
+- **Smart-Path AI Classification**: Categorizes errors into `GENERATE_NEW_LINK`, `SCHEDULE_PAYDAY_RETRY`, or `ABANDON` (risk check failure).
+- **Non-Blocking Timer Scheduler**: Min-heap scheduled retries and 120-second link expiry enforcement.
+- **Real-Time SSE Dashboard**: Server-Sent Events stream live C++ process logs directly to the browser UI.
 
 </details>
 
 ---
 
-<h2 align="center">• architecture •</h2>
+<h2 align="center">Architecture</h2>
 
 ### End-to-End System Component Flow
 
@@ -135,7 +135,7 @@ stateDiagram-v2
 
 ---
 
-<h2 align="center">• quickstart •</h2>
+<h2 align="center">Quick Start</h2>
 
 ### 1. Prerequisites
 - **C++17 Compiler** (`g++` or `clang++`) & `cmake`
@@ -173,7 +173,7 @@ Open **`http://localhost:8000`** for the **Observability Dashboard** and **`http
 
 ---
 
-<h2 align="center">• repository layout •</h2>
+<h2 align="center">Repository Layout</h2>
 
 ```
 revenue_recovery/
