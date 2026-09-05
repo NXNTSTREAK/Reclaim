@@ -17,13 +17,11 @@
 
 <h2 align="center">System Overview</h2>
 
-<details open>
+<details>
 <summary><b>System Architecture & Core Design</b></summary>
 
-<br />
-
 #### **What it is:**
-- An **dual-engine architecture** combining a zero-latency C++ core daemon with an asynchronous Python FastAPI bridge.
+- A **high-performance dual-engine architecture** combining a zero-latency C++ core daemon with an asynchronous Python FastAPI bridge.
 - A high-throughput event processor capable of ingesting payment failure webhooks via UDP datagrams at **15-20 events/ms**.
 - An intelligent recovery workflow enforcing rule-based policies and AI diagnosis via **Ollama (`phi4-mini`)** or **Gemini AI**.
 - A real-time observability control plane with live financial ledger tracking (`Revenue at Risk` vs. `Revenue Recovered`).
@@ -35,10 +33,9 @@
 
 </details>
 
-<details open>
+<details>
 <summary><b>Key Features & Technical Capabilities</b></summary>
-
-<br />
+<br>
 
 - **Zero-Latency UDP Ingestion**: High-speed C++ datagram listener (`port 9001`) for instant failure event capture without HTTP overhead.
 - **Idempotency Guard**: Dual-layer (in-memory + persistent SQLite) event deduplication preventing double processing or multiple link generation.
@@ -47,6 +44,7 @@
 - **Real-Time SSE Dashboard**: Server-Sent Events stream live C++ process logs directly to the browser UI.
 
 </details>
+
 
 ---
 
