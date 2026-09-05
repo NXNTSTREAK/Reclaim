@@ -15,11 +15,10 @@
 
 ---
 
-<h2 align="center">Overview</h2>
+<h2 align="center">System Overview</h2>
 
-
-<details>
-<summary><b>What this is / isn't</b></summary>
+<details open>
+<summary><b>System Architecture & Core Design</b></summary>
 
 <br />
 
@@ -36,8 +35,8 @@
 
 </details>
 
-<details>
-<summary><b>Notable Features & Capabilities</b></summary>
+<details open>
+<summary><b>Key Features & Technical Capabilities</b></summary>
 
 <br />
 
@@ -51,9 +50,21 @@
 
 ---
 
-<h2 align="center">Architecture</h2>
+<h2 align="center">System Matrix & Architecture</h2>
 
-### End-to-End System Component Flow
+### System Core Component Matrix
+
+| Component | Interface / Port | Technology Stack | Core Role |
+| :--- | :---: | :--- | :--- |
+| **C++ Core Daemon** | UDP `9001` | C++17, Pthreads, SQLite WAL | Event Queueing, Idempotency, Min-Heap Scheduling, Policy Engine |
+| **FastAPI Bridge** | HTTP `8000` | Python 3.10+, FastAPI, Uvicorn | Smart-Path Routing, SSE Log Streaming, Subprocess Control |
+| **Local LLM Engine** | HTTP `11434` | Ollama (`phi4-mini`) | Local AI Diagnosis & Failure Reason Classification |
+| **Observability Dashboard** | Web `/` | HTML5, Vanilla JS, SSE | Dual-Pane Log Visualization & Process Lifecycle Control |
+| **Traffic Simulator** | Web `/simulator` | HTML5, Canvas, Web Socket/UDP | High-Throughput Burst Event Generation (15-20 events/ms) |
+
+<br />
+
+### End-to-End System Topology
 
 ```mermaid
 flowchart TB
@@ -116,6 +127,8 @@ flowchart TB
     Router -->|Stream Log Lines| SSEHub
 ```
 
+<br />
+
 ### Payment Lifecycle State Machine
 
 ```mermaid
@@ -133,20 +146,23 @@ stateDiagram-v2
 
 ---
 
-<h2 align="center">Quick Start</h2>
+<h2 align="center">Quick Start Guide</h2>
 
-### 1. Prerequisites
-- **C++17 Compiler** (`g++` or `clang++`) & `cmake`
-- **Python 3.10+**
-- **SQLite3 & OpenSSL Development Libraries** (`libsqlite3-dev`, `libssl-dev`)
+| Step | Action | Requirements & Output |
+| :---: | :--- | :--- |
+| **01** | **Prerequisites Setup** | C++17 Compiler (`g++`/`clang++`), CMake, Python 3.10+, `libsqlite3-dev`, `libssl-dev` |
+| **02** | **Environment Config** | Copy template `.env.example` -> `.env` and fill API credentials |
+| **03** | **C++ Engine Compilation** | Run `cmake .. && make -j$(nproc)` in `build/` directory |
+| **04** | **Launch FastAPI Bridge** | Activate `.venv`, install requirements, run `python -m api_bridge.main` |
 
-### 2. Environment Configuration
-Copy `.env.example` to `.env` and populate your credentials:
+<br />
+
+#### 1. Environment Configuration
 ```bash
 cp .env.example .env
 ```
 
-### 3. Build C++ Engine Daemon
+#### 2. Build C++ Engine Daemon
 ```bash
 mkdir -p build && cd build
 cmake ..
@@ -154,24 +170,24 @@ make -j$(nproc)
 cd ..
 ```
 
-### 4. Launch FastAPI Bridge & Dashboard
+#### 3. Launch FastAPI Bridge & Dashboard
 ```bash
 # Setup virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
 
-# Install requirements
+# Install dependencies
 pip install fastapi uvicorn razorpay google-genai requests
 
 # Launch API Bridge
 python -m api_bridge.main
 ```
 
-Open **`http://localhost:8000`** for the **Observability Dashboard** and **`http://localhost:8000/simulator`** for the **Traffic Simulator**.
+Access the **Observability Dashboard** at `http://localhost:8000` and the **Traffic Simulator** at `http://localhost:8000/simulator`.
 
 ---
 
-<h2 align="center">Repository Layout</h2>
+<h2 align="center">Repository Directory Layout</h2>
 
 ```
 revenue_recovery/
@@ -193,13 +209,15 @@ revenue_recovery/
 
 ---
 
-<h2 align="center">Credits & Acknowledgments</h2>
+<h2 align="center">Credits & Open Source Acknowledgments</h2>
 
-- **[cpp-httplib](https://github.com/yhirose/cpp-httplib)** by Yuji Hirose ([@yhirose](https://github.com/yhirose)) - Single-header C++11 HTTP/HTTPS client & server library.
-- **[nlohmann/json](https://github.com/nlohmann/json)** by Niels Lohmann ([@nlohmann](https://github.com/nlohmann)) - Modern C++ JSON library.
+| Open Source Library | Original Author | Purpose & Integration | Project Link |
+| :--- | :--- | :--- | :---: |
+| **`cpp-httplib`** | Yuji Hirose ([@yhirose](https://github.com/yhirose)) | Single-header C++11 HTTP/HTTPS client & server library for low-latency IPC communication | [Repository](https://github.com/yhirose/cpp-httplib) |
+| **`nlohmann/json`** | Niels Lohmann ([@nlohmann](https://github.com/nlohmann)) | Modern C++ header-only JSON parser for structured datagram payload processing | [Repository](https://github.com/nlohmann/json) |
 
 ---
 
 <p align="center">
-  <sub>Built with precision for high-availability digital payment infrastructure. Distributed under the MIT License.</sub>
+  <sub>Engineered for high-availability digital payment infrastructure. Distributed under the MIT License.</sub>
 </p>
